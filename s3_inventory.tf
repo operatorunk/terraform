@@ -23,28 +23,42 @@ data "aws_s3_bucket_policy" "inventory_reports_existing" {
 # Add required permissions for S3 Inventory
 data "aws_iam_policy_document" "inventory_reports_additions" {
 
-  statement {
-    sid    = "AllowS3InventoryWrite"
-    effect = "Allow"
+statement {
+  sid    = "AllowS3InventoryWrite"
+  effect = "Allow"
 
-    principals {
-      type        = "Service"
-      identifiers = ["s3.amazonaws.com"]
-    }
-
-    actions = ["s3:PutObject"]
-
-    resources = [
-      "arn:aws:s3:::${local.reports_bucket_name}/s3-inventory/*"
-    ]
-
-    condition {
-      test     = "ArnLike"
-      variable = "aws:SourceArn"
-      values   = [data.aws_s3_bucket.inventory_target.arn]
-    }
+  principals {
+    type        = "Service"
+    identifiers = ["s3.amazonaws.com"]
   }
 
+  actions = ["s3:PutObject"]
+
+  resources = [
+    "arn:aws:s3:::${local.reports_bucket_name}/s3-inventory/*"
+  ]
+
+  # Only allow inventory delivery from THIS AWS account (recommended against confused-deputy)
+  condition {
+    test     = "StringEquals"
+    variable = "aws:SourceAccount"
+    values   = [data.aws_caller_identity.current.account_id]
+  }
+
+  # Only allow delivery coming from the inventoried (source) bucket
+  condition {
+    test     = "ArnLike"
+    variable = "aws:SourceArn"
+    values   = [data.aws_s3_bucket.inventory_target.arn]
+  }
+
+  # Require the ACL used by S3 Inventory so the destination bucket owner retains control
+  condition {
+    test     = "StringEquals"
+    variable = "s3:x-amz-acl"
+    values   = ["bucket-owner-full-control"]
+  }
+}
   statement {
     sid    = "AllowS3InventoryDestinationValidation"
     effect = "Allow"
