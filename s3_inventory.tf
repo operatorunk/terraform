@@ -5,6 +5,9 @@ locals {
   reports_bucket_name = "${var.project}-${var.TF_stage}-inventory-reports"
 }
 
+# Get current AWS Account ID for bucket policy conditions (aws:SourceAccount)
+data "aws_caller_identity" "current" {}
+
 # Existing source bucket (already created on s3.ft)
 data "aws_s3_bucket" "inventory_target" {
   bucket = local.source_bucket_name
