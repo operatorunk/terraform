@@ -41,53 +41,53 @@ statement {
     "arn:aws:s3:::${local.reports_bucket_name}/s3-inventory/*"
   ]
 
-  # Only allow inventory delivery from THIS AWS account (recommended against confused-deputy)
+  # Ensure the request comes from this AWS account
   condition {
     test     = "StringEquals"
     variable = "aws:SourceAccount"
     values   = [data.aws_caller_identity.current.account_id]
   }
 
-  # Only allow delivery coming from the inventoried (source) bucket
+  # Ensure the request comes from the inventoried source bucket
   condition {
     test     = "ArnLike"
     variable = "aws:SourceArn"
     values   = [data.aws_s3_bucket.inventory_target.arn]
   }
+}
 
-  # Require the ACL used by S3 Inventory so the destination bucket owner retains control
+statement {
+  sid    = "AllowS3InventoryDestinationValidation"
+  effect = "Allow"
+
+  principals {
+    type        = "Service"
+    identifiers = ["s3.amazonaws.com"]
+  }
+
+  actions = [
+    "s3:GetBucketAcl",
+    "s3:ListBucket"
+  ]
+
+  resources = [
+    "arn:aws:s3:::${local.reports_bucket_name}"
+  ]
+
+  # Ensure the request comes from this AWS account
   condition {
     test     = "StringEquals"
-    variable = "s3:x-amz-acl"
-    values   = ["bucket-owner-full-control"]
+    variable = "aws:SourceAccount"
+    values   = [data.aws_caller_identity.current.account_id]
+  }
+
+  # Ensure the request comes from the inventoried source bucket
+  condition {
+    test     = "ArnLike"
+    variable = "aws:SourceArn"
+    values   = [data.aws_s3_bucket.inventory_target.arn]
   }
 }
-  statement {
-    sid    = "AllowS3InventoryDestinationValidation"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["s3.amazonaws.com"]
-    }
-
-    actions = [
-      "s3:GetBucketAcl",
-      "s3:ListBucket"
-    ]
-
-    resources = [
-      "arn:aws:s3:::${local.reports_bucket_name}"
-    ]
-
-    condition {
-      test     = "ArnLike"
-      variable = "aws:SourceArn"
-      values   = [data.aws_s3_bucket.inventory_target.arn]
-    }
-  }
-}
-
 # Merge existing policy with new statements
 data "aws_iam_policy_document" "inventory_reports_merged" {
   source_policy_documents = [
