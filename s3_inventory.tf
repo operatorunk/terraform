@@ -26,67 +26,65 @@ data "aws_s3_bucket_policy" "inventory_reports_existing" {
 # Add required permissions for S3 Inventory
 data "aws_iam_policy_document" "inventory_reports_additions" {
 
-statement {
-  sid    = "AllowS3InventoryWrite"
-  effect = "Allow"
+  statement {
+    sid    = "AllowS3InventoryWrite"
+    effect = "Allow"
 
-  principals {
-    type        = "Service"
-    identifiers = ["s3.amazonaws.com"]
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = [
+      "arn:aws:s3:::${local.reports_bucket_name}/s3-inventory/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = [data.aws_s3_bucket.inventory_target.arn]
+    }
   }
 
-  actions = ["s3:PutObject"]
+  statement {
+    sid    = "AllowS3InventoryDestinationValidation"
+    effect = "Allow"
 
-  resources = [
-    "arn:aws:s3:::${local.reports_bucket_name}/s3-inventory/*"
-  ]
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
 
-  # Ensure the request comes from this AWS account
-  condition {
-    test     = "StringEquals"
-    variable = "aws:SourceAccount"
-    values   = [data.aws_caller_identity.current.account_id]
+    actions = [
+      "s3:GetBucketAcl",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      "arn:aws:s3:::${local.reports_bucket_name}"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = [data.aws_s3_bucket.inventory_target.arn]
+    }
   }
 
-  # Ensure the request comes from the inventoried source bucket
-  condition {
-    test     = "ArnLike"
-    variable = "aws:SourceArn"
-    values   = [data.aws_s3_bucket.inventory_target.arn]
-  }
-}
-
-statement {
-  sid    = "AllowS3InventoryDestinationValidation"
-  effect = "Allow"
-
-  principals {
-    type        = "Service"
-    identifiers = ["s3.amazonaws.com"]
-  }
-
-  actions = [
-    "s3:GetBucketAcl",
-    "s3:ListBucket"
-  ]
-
-  resources = [
-    "arn:aws:s3:::${local.reports_bucket_name}"
-  ]
-
-  # Ensure the request comes from this AWS account
-  condition {
-    test     = "StringEquals"
-    variable = "aws:SourceAccount"
-    values   = [data.aws_caller_identity.current.account_id]
-  }
-
-  # Ensure the request comes from the inventoried source bucket
-  condition {
-    test     = "ArnLike"
-    variable = "aws:SourceArn"
-    values   = [data.aws_s3_bucket.inventory_target.arn]
-  }
 }
 # Merge existing policy with new statements
 data "aws_iam_policy_document" "inventory_reports_merged" {
