@@ -122,8 +122,6 @@ resource "aws_s3_bucket_inventory" "daily_inventory" {
       bucket_arn = data.aws_s3_bucket.inventory_reports.arn
       format     = "CSV"
       prefix     = "s3-inventory"
-
-      bucket_owner_full_control = true
     }
   }
 
