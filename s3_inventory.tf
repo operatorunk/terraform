@@ -46,12 +46,6 @@ data "aws_iam_policy_document" "inventory_reports_additions" {
       variable = "aws:SourceAccount"
       values   = [data.aws_caller_identity.current.account_id]
     }
-
-    condition {
-      test     = "ArnLike"
-      variable = "aws:SourceArn"
-      values   = [data.aws_s3_bucket.inventory_target.arn]
-    }
   }
 
   statement {
@@ -76,12 +70,6 @@ data "aws_iam_policy_document" "inventory_reports_additions" {
       test     = "StringEquals"
       variable = "aws:SourceAccount"
       values   = [data.aws_caller_identity.current.account_id]
-    }
-
-    condition {
-      test     = "ArnLike"
-      variable = "aws:SourceArn"
-      values   = [data.aws_s3_bucket.inventory_target.arn]
     }
   }
 
